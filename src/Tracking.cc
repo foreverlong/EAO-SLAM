@@ -2634,22 +2634,76 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
     float sampleYaw = 0.0;
     int nAllLineNum = objMap->mObjectFrame.back()->mObjLinesEigen.rows();
 
-    for(int i = 0; i < 30; i++)
+    // Variable sampling strategy based on error feedback
+    std::vector<float> sampleAngles;
+    
+    // Phase 1: Coarse sampling with 4° step
+    for(int i = 0; i <= 22; i++)
+    {
+        float angle = -45.0 + i * 4.0;  // -45° to 45° with 4° step
+        if(angle <= 45.0)
+            sampleAngles.push_back(angle / 180.0 * M_PI);
+    }
+    
+    // Phase 2: If we have previous sampling history, refine around best angles
+    if(objMap->mvAngleTimesAndScore.size() > 0)
+    {
+        // Get the best angle from previous sampling
+        float bestAngle = objMap->mvAngleTimesAndScore[0][0];  // Best angle in radians
+        float bestError = objMap->mvAngleTimesAndScore[0][4];   // Error of best angle
+        
+        // Adaptive step size based on previous error: 1° to 3° range
+        float adaptiveStep = 1.0 + bestError * 2.0;  // Maps error [0,1] to step [1°,3°]
+        if(adaptiveStep > 3.0) adaptiveStep = 3.0;
+        if(adaptiveStep < 1.0) adaptiveStep = 1.0;
+        
+        // Refine around the best angle with adaptive step
+        for(int i = -3; i <= 3; i++)
+        {
+            if(i == 0) continue;  // Skip the center, already sampled
+            float refineAngle = bestAngle + (i * adaptiveStep / 180.0 * M_PI);
+            // Only add if within valid range
+            if(refineAngle >= -45.0/180.0*M_PI && refineAngle <= 45.0/180.0*M_PI)
+                sampleAngles.push_back(refineAngle);
+        }
+        
+        // If we have multiple good candidates, also refine around them
+        for(int j = 1; j < std::min(3, (int)objMap->mvAngleTimesAndScore.size()); j++)
+        {
+            float candidateAngle = objMap->mvAngleTimesAndScore[j][0];
+            float candidateError = objMap->mvAngleTimesAndScore[j][4];
+            
+            // Only refine if score is competitive
+            if(objMap->mvAngleTimesAndScore[j][2] > 0.5 * objMap->mvAngleTimesAndScore[0][2])
+            {
+                float fineStep = 1.0 + candidateError * 2.0;
+                if(fineStep > 3.0) fineStep = 3.0;
+                if(fineStep < 1.0) fineStep = 1.0;
+                
+                for(int i = -2; i <= 2; i++)
+                {
+                    if(i == 0) continue;
+                    float refineAngle = candidateAngle + (i * fineStep / 180.0 * M_PI);
+                    if(refineAngle >= -45.0/180.0*M_PI && refineAngle <= 45.0/180.0*M_PI)
+                        sampleAngles.push_back(refineAngle);
+                }
+            }
+        }
+    }
+    
+    // Remove duplicates and sort
+    std::sort(sampleAngles.begin(), sampleAngles.end());
+    sampleAngles.erase(std::unique(sampleAngles.begin(), sampleAngles.end()), sampleAngles.end());
+
+    for(size_t i = 0; i < sampleAngles.size(); i++)
     {
         // initial angle.
         float roll, pitch, yaw;
         roll = 0.0;
         pitch = 0.0;
-        yaw = 0.0;
+        yaw = sampleAngles[i];
         float error = 0.0;
         float errorYaw = 0.0;
-
-        // 1 -> 15: -45° - 0°
-        // 16 -> 30: 0° - 45°
-        if(i < 15)
-            yaw = (0.0 - i*3.0)/180.0 * M_PI;
-        else
-            yaw = (0.0 + (i-15)*3.0)/180.0 * M_PI;
 
         // object pose in object frame. (Ryaw)
         float cp = cos(pitch);
