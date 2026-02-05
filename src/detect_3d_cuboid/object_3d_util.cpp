@@ -534,10 +534,12 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
     double total_angle_diff = 0;
     double not_found_penalty = 30.0/180.0*M_PI*2;    // if not found any VP supported lines, give each box edge a constant cost (45 or 30 ? degree)
     
-    static bool print_once = true;
-    if (print_once) {
+    static int print_count = 0;
+    static const int max_prints = 3;  // Print details for first 3 calls
+    bool should_print = (print_count < max_prints);
+    
+    if (should_print && print_count == 0) {
         std::cout << "\n===== Angle Error Calculation (角度误差计算) =====" << std::endl;
-        print_once = false;
     }
     
     for (int vp_id = 0; vp_id < vps_box_edge_pt_ids.rows(); vp_id++)
@@ -571,8 +573,8 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
                 }
                 
                 // Print angle differences (corresponding to Θ_tl and Θ_tw in the paper)
-                if (static_cast<bool>(print_once)) {
-                    std::cout << "VP " << vp_id << " Edge " << ee_id << " angle diff (角度差 Θ): " 
+                if (should_print) {
+                    std::cout << "  VP " << vp_id << " Edge " << ee_id << " angle diff (角度差 Θ): " 
                               << (angle_diff_temp * 180.0 / M_PI) << " degrees" << std::endl;
                 }
                 
@@ -584,10 +586,14 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
     }
     
     // Print total angle error (Θ_e in equation 10)
-    if (static_cast<bool>(print_once)) {
-        std::cout << "Total angle error (总角度误差 Θ_e): " << (total_angle_diff * 180.0 / M_PI) 
+    if (should_print) {
+        std::cout << "  Total angle error (总角度误差 Θ_e): " << (total_angle_diff * 180.0 / M_PI) 
                   << " degrees" << std::endl;
+        if (print_count == max_prints - 1) {
+            std::cout << "  (Further angle calculations will not be printed)" << std::endl;
+        }
         std::cout << "=================================================" << std::endl;
+        print_count++;
     }
     
     return total_angle_diff;
