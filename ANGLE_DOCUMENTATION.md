@@ -49,7 +49,7 @@ double pre_merge_angle_thre = pre_merge_angle_thre_degree/180.0*M_PI;  // 转换
 
 ## 论文引用 (Paper Reference)
 
-这个角度阈值在以下论文中被使用：
+该实现基于以下论文：
 
 Wu Y, Zhang Y, Zhu D, et al. **EAO-SLAM: Monocular Semi-Dense Object SLAM Based on Ensemble Data Association**. 2020 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). IEEE, 2020: 4966-4973.
 
