@@ -98,6 +98,6 @@ When you run the EAO-SLAM system with object detection enabled, these print stat
 ## Notes
 
 - All angles are converted from radians to degrees for printing
-- The `print_once` flag is used in some places to avoid excessive output during repeated calls
-- The sample object printing is limited to the first 10 objects
+- A `print_count` counter is used in the angle error calculation function to limit output to the first 3 calls
+- The sample object printing is limited to the first 10 objects using a static counter
 - These print statements help verify the implementation matches the paper's description

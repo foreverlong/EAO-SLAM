@@ -593,6 +593,9 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
             std::cout << "  (Further angle calculations will not be printed)" << std::endl;
         }
         std::cout << "=================================================" << std::endl;
+    }
+    
+    if (print_count < max_prints) {
         print_count++;
     }
     
