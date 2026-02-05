@@ -83,18 +83,39 @@ chmod +x build.sh
     + Robotic Grasping demo: [YouTube](https://youtu.be/cNtvqiArVfI) | [bilibili](https://www.bilibili.com/video/BV1ZA411p7KK)
     + Augmented Reality demo: [YouTube](https://youtu.be/E8jfkO_Q7Iw) | [bilibili](https://www.bilibili.com/video/BV1V5411p7gA)
 
-## 5. Note
+## 5. Improvements
+
+### 5.1 Variable Sampling Angle Strategy for Object Orientation Estimation
+
+This improvement enhances the object orientation estimation by implementing an adaptive sampling strategy:
+
+**Key Features:**
++ **Variable Step Size**: Instead of fixed 3° sampling, uses adaptive 1°-4° steps based on error feedback
++ **Two-Phase Sampling**:
+  - Phase 1: Coarse sampling with 4° step across -45° to 45° range
+  - Phase 2: Adaptive refinement around promising angles with 1-3° steps
++ **Error-Based Adaptation**: Step size adapts based on previous frame's angle error:
+  - Low error (< 0.1) → 1° fine steps for precision
+  - High error (> 0.5) → 3° steps for broader search
++ **Benefits**: Achieves better orientation accuracy with comparable computational cost
+
+**Implementation Details:**
++ Modified `SampleObjYaw()` function in `src/Tracking.cc`
++ Uses `mvAngleTimesAndScore` history to guide adaptive sampling
++ Refines around top-3 candidate angles when their scores are competitive
+
+## 6. Note
 
 + This is an incomplete version of our paper. If you want to use it in your work or with other datasets, you should prepare the offline semantic detection/segmentation results or switch to online mode. Besides, you may need to adjust the data association strategy and abnormal object elimination mechanism (We found the misdetection from YOLO has a great impact on the results).
 
-## 6. Acknowledgement
+## 7. Acknowledgement
 
 Thanks for the great work: [**ORB-SLAM2**](https://github.com/raulmur/ORB_SLAM2), [**Cube SLAM**](https://github.com/shichaoy/cube_slam), and [**Semidense-Lines**](https://github.com/shidahe/semidense-lines).
 + Mur-Artal R, Tardós J D. **Orb-slam2: An open-source slam system for monocular, stereo, and rgb-d cameras**[J]. IEEE Transactions on Robotics, 2017, 33(5): 1255-1262. [PDF](https://arxiv.org/abs/1610.06475), [Code](https://github.com/raulmur/ORB_SLAM2)
 + Yang S, Scherer S. **Cubeslam: Monocular 3-d object slam**[J]. IEEE Transactions on Robotics, 2019, 35(4): 925-938. [PDF](https://arxiv.org/abs/1806.00557), [Code](https://github.com/shichaoy/cube_slam)
 + He S, Qin X, Zhang Z, et al. **Incremental 3d line segment extraction from semi-dense slam**[C]//2018 24th International Conference on Pattern Recognition (ICPR). IEEE, 2018: 1658-1663. [PDF](https://arxiv.org/abs/1708.03275), [Code](https://github.com/shidahe/semidense-lines)
 
-## 7. Contact
+## 8. Contact
 
 + [Yanmin Wu](https://yanmin-wu.github.io/), Email: wuyanminmax@gmail.com
 + Corresponding author: [Yunzhou Zhang *](http://faculty.neu.edu.cn/ise/zhangyunzhou), Email: zhangyunzhou@mail.neu.edu.cn
