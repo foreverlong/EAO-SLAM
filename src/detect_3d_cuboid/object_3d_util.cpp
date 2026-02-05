@@ -534,6 +534,12 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
     double total_angle_diff = 0;
     double not_found_penalty = 30.0/180.0*M_PI*2;    // if not found any VP supported lines, give each box edge a constant cost (45 or 30 ? degree)
     
+    static bool print_once = true;
+    if (print_once) {
+        std::cout << "\n===== Angle Error Calculation (角度误差计算) =====" << std::endl;
+        print_once = false;
+    }
+    
     for (int vp_id = 0; vp_id < vps_box_edge_pt_ids.rows(); vp_id++)
     {
         Vector2d vp_bound_angles = all_vp_bound_edge_angles.row(vp_id);
@@ -563,12 +569,27 @@ double box_edge_alignment_angle_error(  const MatrixXd& all_vp_bound_edge_angles
                     if (temp<angle_diff_temp)
                         angle_diff_temp = temp;
                 }
-                    total_angle_diff = total_angle_diff + angle_diff_temp;
+                
+                // Print angle differences (corresponding to Θ_tl and Θ_tw in the paper)
+                if (static_cast<bool>(print_once)) {
+                    std::cout << "VP " << vp_id << " Edge " << ee_id << " angle diff (角度差 Θ): " 
+                              << (angle_diff_temp * 180.0 / M_PI) << " degrees" << std::endl;
+                }
+                
+                total_angle_diff = total_angle_diff + angle_diff_temp;
             }
         }
         else
             total_angle_diff=total_angle_diff+not_found_penalty;
     }
+    
+    // Print total angle error (Θ_e in equation 10)
+    if (static_cast<bool>(print_once)) {
+        std::cout << "Total angle error (总角度误差 Θ_e): " << (total_angle_diff * 180.0 / M_PI) 
+                  << " degrees" << std::endl;
+        std::cout << "=================================================" << std::endl;
+    }
+    
     return total_angle_diff;
 }
 

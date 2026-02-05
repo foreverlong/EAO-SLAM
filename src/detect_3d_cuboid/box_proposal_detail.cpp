@@ -150,8 +150,18 @@ void detect_3d_cuboid::detect_cuboid(	const cv::Mat& rgb_img,
 		double yaw_init = cam_pose.camera_yaw - 90.0 / 180.0 * M_PI;  // yaw init is directly facing the camera, align with camera optical axis	  
 		std::vector<double> obj_yaw_samples; 
 		linespace<double>(yaw_init - 45.0/180.0*M_PI, yaw_init + 45.0/180.0*M_PI, 6.0/180.0*M_PI, obj_yaw_samples);
+		
+		// Print sampling angles (采样角度)
+		std::cout << "===== Object Yaw Sampling Angles (物体朝向采样角度) =====" << std::endl;
+		std::cout << "Sampling angle step (采样角度步长): " << (6.0) << " degrees" << std::endl;
+		std::cout << "Number of samples (采样数量): " << obj_yaw_samples.size() << std::endl;
+		std::cout << "Sampling angles (采样角度列表, in degrees):" << std::endl;
+		for (size_t i = 0; i < obj_yaw_samples.size(); i++) {
+			std::cout << "  Sample " << i << ": " << (obj_yaw_samples[i] * 180.0 / M_PI) << " degrees" << std::endl;
+		}
+		std::cout << "=================================================" << std::endl;
 
-		MatrixXd all_configs_errors(400,9); 
+		MatrixXd all_configs_errors(400,9);
 		MatrixXd all_box_corners_2ds(800,8); 	// initialize a large eigen matrix
 		int valid_config_number_all_height=0; 	// all valid objects of all height samples
 		
@@ -560,6 +570,14 @@ void detect_3d_cuboid::detect_cuboid(	const cv::Mat& rgb_img,
 				sample_obj->edge_distance_error = all_configs_error_one_objH(raw_cube_ind,4); // record the original error
 				sample_obj->edge_angle_error = all_configs_error_one_objH(raw_cube_ind,5);
 				sample_obj->normalized_error = normalized_score(box_id);
+				
+				// Print edge angle error for this sample object (对应论文中的角度误差)
+				static int print_count = 0;
+				if (print_count < 10) {  // Print first 10 samples to avoid too much output
+					std::cout << "Sample object " << print_count << " edge_angle_error (边缘角度误差): " 
+					          << (sample_obj->edge_angle_error * 180.0 / M_PI) << " degrees" << std::endl;
+					print_count++;
+				}
 
 				double skew_ratio = sample_obj->scale.head(2).maxCoeff()/sample_obj->scale.head(2).minCoeff();
 				sample_obj->skew_ratio = skew_ratio;
