@@ -2640,9 +2640,8 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
     // Phase 1: Coarse sampling with 4° step
     for(int i = 0; i <= 22; i++)
     {
-        float angle = -45.0 + i * 4.0;  // -45° to 45° with 4° step
-        if(angle <= 45.0)
-            sampleAngles.push_back(angle / 180.0 * M_PI);
+        float angle = -45.0 + i * 4.0;  // -45° to 43° with 4° step (23 samples)
+        sampleAngles.push_back(angle / 180.0 * M_PI);
     }
     
     // Phase 2: If we have previous sampling history, refine around best angles
@@ -2650,15 +2649,19 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
     {
         // Get the best angle from previous sampling
         float bestAngle = objMap->mvAngleTimesAndScore[0][0];  // Best angle in radians
-        float bestError = objMap->mvAngleTimesAndScore[0][4];   // Error of best angle
+        float bestError = objMap->mvAngleTimesAndScore[0][4];   // Normalized error [0,1] from angle alignment
         
         // Adaptive step size based on previous error: 1° to 3° range
-        float adaptiveStep = 1.0 + bestError * 2.0;  // Maps error [0,1] to step [1°,3°]
-        if(adaptiveStep > 3.0) adaptiveStep = 3.0;
-        if(adaptiveStep < 1.0) adaptiveStep = 1.0;
+        // Formula: step = 1° + error * 2°, clamped to [1°, 3°]
+        // Low error (0.0) → 1° fine steps for precision
+        // High error (1.0) → 3° steps for broader search
+        float adaptiveStep = 1.0 + bestError * 2.0;
+        adaptiveStep = std::max(1.0f, std::min(3.0f, adaptiveStep));
         
         // Refine around the best angle with adaptive step
-        for(int i = -3; i <= 3; i++)
+        // Using ±3 steps gives ~6° to 18° refinement range depending on error
+        const int kRefinementSteps = 3;
+        for(int i = -kRefinementSteps; i <= kRefinementSteps; i++)
         {
             if(i == 0) continue;  // Skip the center, already sampled
             float refineAngle = bestAngle + (i * adaptiveStep / 180.0 * M_PI);
@@ -2668,18 +2671,19 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
         }
         
         // If we have multiple good candidates, also refine around them
+        const float kCompetitiveScoreThreshold = 0.5f;  // Refine candidates with score >= 50% of best
         for(int j = 1; j < std::min(3, (int)objMap->mvAngleTimesAndScore.size()); j++)
         {
             float candidateAngle = objMap->mvAngleTimesAndScore[j][0];
             float candidateError = objMap->mvAngleTimesAndScore[j][4];
             
-            // Only refine if score is competitive
-            if(objMap->mvAngleTimesAndScore[j][2] > 0.5 * objMap->mvAngleTimesAndScore[0][2])
+            // Only refine if score is competitive (within 50% of best score)
+            if(objMap->mvAngleTimesAndScore[j][2] > kCompetitiveScoreThreshold * objMap->mvAngleTimesAndScore[0][2])
             {
                 float fineStep = 1.0 + candidateError * 2.0;
-                if(fineStep > 3.0) fineStep = 3.0;
-                if(fineStep < 1.0) fineStep = 1.0;
+                fineStep = std::max(1.0f, std::min(3.0f, fineStep));
                 
+                // Smaller refinement range for additional candidates
                 for(int i = -2; i <= 2; i++)
                 {
                     if(i == 0) continue;
