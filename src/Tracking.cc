@@ -2637,10 +2637,11 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
     // Variable sampling strategy based on error feedback
     std::vector<float> sampleAngles;
     
-    // Phase 1: Coarse sampling with 4° step
-    for(int i = 0; i <= 22; i++)
+    // Phase 1: Coarse sampling with 4° step from -44° to 44° (23 samples)
+    // Using symmetric range around 0° for unbiased sampling
+    for(int i = -11; i <= 11; i++)
     {
-        float angle = -45.0 + i * 4.0;  // -45° to 43° with 4° step (23 samples)
+        float angle = i * 4.0;  // -44°, -40°, ..., 0°, ..., 40°, 44°
         sampleAngles.push_back(angle / 180.0 * M_PI);
     }
     
@@ -2650,6 +2651,7 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
         // Get the best angle from previous sampling
         float bestAngle = objMap->mvAngleTimesAndScore[0][0];  // Best angle in radians
         float bestError = objMap->mvAngleTimesAndScore[0][4];   // Normalized error [0,1] from angle alignment
+        // Note: bestError is assumed to be normalized by the scoring function in lines 2810-2816
         
         // Adaptive step size based on previous error: 1° to 3° range
         // Formula: step = 1° + error * 2°, clamped to [1°, 3°]

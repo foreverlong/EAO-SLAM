@@ -92,7 +92,7 @@ This improvement enhances the object orientation estimation by implementing an a
 **Key Features:**
 + **Variable Step Size**: Instead of fixed 3° sampling, uses adaptive 1°-4° steps based on error feedback
 + **Two-Phase Sampling**:
-  - Phase 1: Coarse sampling with 4° step across -45° to 45° range
+  - Phase 1: Coarse sampling with 4° step across -44° to 44° range (23 samples, symmetric around 0°)
   - Phase 2: Adaptive refinement around promising angles with 1-3° steps
 + **Error-Based Adaptation**: Step size adapts based on previous frame's angle error:
   - Low error (< 0.1) → 1° fine steps for precision
