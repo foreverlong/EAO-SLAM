@@ -2634,22 +2634,82 @@ void Tracking::SampleObjYaw(Object_Map* objMap)
     float sampleYaw = 0.0;
     int nAllLineNum = objMap->mObjectFrame.back()->mObjLinesEigen.rows();
 
-    for(int i = 0; i < 30; i++)
+    // Variable sampling strategy based on error feedback
+    std::vector<float> sampleAngles;
+    
+    // Phase 1: Coarse sampling with 4° step from -44° to 44° (23 samples)
+    // Using symmetric range around 0° for unbiased sampling
+    for(int i = -11; i <= 11; i++)
+    {
+        float angle = i * 4.0;  // -44°, -40°, ..., 0°, ..., 40°, 44°
+        sampleAngles.push_back(angle / 180.0 * M_PI);
+    }
+    
+    // Phase 2: If we have previous sampling history, refine around best angles
+    if(objMap->mvAngleTimesAndScore.size() > 0)
+    {
+        // Get the best angle from previous sampling
+        float bestAngle = objMap->mvAngleTimesAndScore[0][0];  // Best angle in radians
+        float bestError = objMap->mvAngleTimesAndScore[0][4];   // Normalized error [0,1] from angle alignment
+        // Note: bestError is assumed to be normalized by the scoring function in lines 2810-2816
+        
+        // Adaptive step size based on previous error: 1° to 3° range
+        // Formula: step = 1° + error * 2°, clamped to [1°, 3°]
+        // Low error (0.0) → 1° fine steps for precision
+        // High error (1.0) → 3° steps for broader search
+        float adaptiveStep = 1.0 + bestError * 2.0;
+        adaptiveStep = std::max(1.0f, std::min(3.0f, adaptiveStep));
+        
+        // Refine around the best angle with adaptive step
+        // Using ±3 steps gives ~6° to 18° refinement range depending on error
+        const int kRefinementSteps = 3;
+        for(int i = -kRefinementSteps; i <= kRefinementSteps; i++)
+        {
+            if(i == 0) continue;  // Skip the center, already sampled
+            float refineAngle = bestAngle + (i * adaptiveStep / 180.0 * M_PI);
+            // Only add if within valid range
+            if(refineAngle >= -45.0/180.0*M_PI && refineAngle <= 45.0/180.0*M_PI)
+                sampleAngles.push_back(refineAngle);
+        }
+        
+        // If we have multiple good candidates, also refine around them
+        const float kCompetitiveScoreThreshold = 0.5f;  // Refine candidates with score >= 50% of best
+        for(int j = 1; j < std::min(3, (int)objMap->mvAngleTimesAndScore.size()); j++)
+        {
+            float candidateAngle = objMap->mvAngleTimesAndScore[j][0];
+            float candidateError = objMap->mvAngleTimesAndScore[j][4];
+            
+            // Only refine if score is competitive (within 50% of best score)
+            if(objMap->mvAngleTimesAndScore[j][2] > kCompetitiveScoreThreshold * objMap->mvAngleTimesAndScore[0][2])
+            {
+                float fineStep = 1.0 + candidateError * 2.0;
+                fineStep = std::max(1.0f, std::min(3.0f, fineStep));
+                
+                // Smaller refinement range for additional candidates
+                for(int i = -2; i <= 2; i++)
+                {
+                    if(i == 0) continue;
+                    float refineAngle = candidateAngle + (i * fineStep / 180.0 * M_PI);
+                    if(refineAngle >= -45.0/180.0*M_PI && refineAngle <= 45.0/180.0*M_PI)
+                        sampleAngles.push_back(refineAngle);
+                }
+            }
+        }
+    }
+    
+    // Remove duplicates and sort
+    std::sort(sampleAngles.begin(), sampleAngles.end());
+    sampleAngles.erase(std::unique(sampleAngles.begin(), sampleAngles.end()), sampleAngles.end());
+
+    for(size_t i = 0; i < sampleAngles.size(); i++)
     {
         // initial angle.
         float roll, pitch, yaw;
         roll = 0.0;
         pitch = 0.0;
-        yaw = 0.0;
+        yaw = sampleAngles[i];
         float error = 0.0;
         float errorYaw = 0.0;
-
-        // 1 -> 15: -45° - 0°
-        // 16 -> 30: 0° - 45°
-        if(i < 15)
-            yaw = (0.0 - i*3.0)/180.0 * M_PI;
-        else
-            yaw = (0.0 + (i-15)*3.0)/180.0 * M_PI;
 
         // object pose in object frame. (Ryaw)
         float cp = cos(pitch);
